@@ -31,6 +31,7 @@ const CATEGORIAS = [
   { nome: 'Saúde',                 icon: '💊', cor: '#EAF3DE', corVal: '#3B6D11', corBar: '#639922', tipo: 'debito' },
   { nome: 'Lazer',                 icon: '🎮', cor: '#FBEAF0', corVal: '#993556', corBar: '#D4537E', tipo: 'debito' },
   { nome: 'Moradia',               icon: '🏠', cor: '#FEF3E2', corVal: '#92520A', corBar: '#D4820A', tipo: 'debito' },
+  { nome: 'Cartão de Crédito',     icon: '🏠', cor: '#FEF3E2', corVal: '#92520A', corBar: '#D4820A', tipo: 'debito' },
   { nome: 'Salário',               icon: '💰', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Reembolso',             icon: '↩️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Ajuste Caixa',          icon: '⚖️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },

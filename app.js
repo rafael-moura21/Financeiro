@@ -5,7 +5,7 @@
 const CONFIG = {
   CLIENT_ID: '75059835538-8j6hih1r8r0h508cnfa8et440ga814gb.apps.googleusercontent.com',        // Google OAuth Client ID
   API_KEY: 'AIzaSyDtZiz6oN6ey_O1Oe3TxBpFniCxtN3FwN4',            // Google API Key
-  SHEET_ID: '',                            // Preenchido automaticamente ao criar
+  SHEET_ID: '1BnvbHIM6vFIONsHvPCvtQyHXlhIYqBrgV8cnneyzN8E',                            // Preenchido automaticamente ao criar
   DISCOVERY_DOCS: [
     'https://sheets.googleapis.com/$discovery/rest?version=v4'
   ],

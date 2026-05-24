@@ -139,7 +139,7 @@ function handleLogin() {
 
 async function onSignIn() {
   document.getElementById('auth-screen').classList.add('hidden');
-  state.sheetId = localStorage.getItem('sheetId') || '';
+  state.sheetId = CONFIG.SHEET_ID || localStorage.getItem('sheetId') || '';
 
   if (!state.sheetId) {
     document.getElementById('setup-screen').classList.remove('hidden');

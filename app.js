@@ -37,6 +37,7 @@ const CATEGORIAS = [
   { nome: 'Saldo M-1',             icon: '📅', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Investimento',          icon: '📈', cor: '#EEEDFE', corVal: '#534AB7', corBar: '#7F77DD', tipo: 'transferencia' },
   { nome: 'Reserva de Emergência', icon: '🛡️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#5DCAA5', tipo: 'transferencia' },
+  { nome: 'Caixa Crédito',         icon: '🛡️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#5DCAA5', tipo: 'transferencia' },
 ];
 
 // Categorias filtradas por tipo

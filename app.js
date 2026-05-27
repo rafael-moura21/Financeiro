@@ -3,8 +3,8 @@
 // no Google Cloud Console (veja README.md)
 // ============================================================
 const CONFIG = {
-  CLIENT_ID: 'SEU_CLIENT_ID_AQUI',        // Google OAuth Client ID
-  API_KEY: 'SUA_API_KEY_AQUI',            // Google API Key
+  CLIENT_ID: '75059835538-8j6hih1r8r0h508cnfa8et440ga814gb.apps.googleusercontent.com',        // Google OAuth Client ID
+  API_KEY: 'AIzaSyDtZiz6oN6ey_O1Oe3TxBpFniCxtN3FwN4',            // Google API Key
   SHEET_ID: '',                            // Preenchido automaticamente ao criar
   DISCOVERY_DOCS: [
     'https://sheets.googleapis.com/$discovery/rest?version=v4'

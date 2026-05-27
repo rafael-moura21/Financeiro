@@ -234,9 +234,11 @@ html, body {
   background: var(--green-dark);
   border-radius: var(--radius);
   padding: 20px;
+  padding-bottom: 16px;
   color: white;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  min-height: auto;
 }
 
 .saldo-hero::before {
@@ -259,12 +261,13 @@ html, body {
 }
 
 .saldo-valor {
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 500;
   font-family: var(--font-mono);
   color: white;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   letter-spacing: -0.02em;
+  word-break: break-word;
 }
 
 .saldo-chips {

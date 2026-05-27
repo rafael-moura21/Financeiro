@@ -85,30 +85,14 @@ function hideLoading() {
 // ============================================================
 // GOOGLE AUTH
 // ============================================================
-function initGoogleAPI() {
-  // Carrega a biblioteca do Google Identity Services
-  const script = document.createElement('script');
-  script.src = 'https://accounts.google.com/gsi/client';
-  script.onload = () => initOAuth();
-  document.head.appendChild(script);
-
-  // Carrega a biblioteca gapi para Sheets
-  const gapiScript = document.createElement('script');
-  gapiScript.src = 'https://apis.google.com/js/api.js';
-  gapiScript.onload = () => {
-    gapi.load('client', async () => {
-      await gapi.client.init({
-        apiKey: CONFIG.API_KEY,
-        discoveryDocs: CONFIG.DISCOVERY_DOCS,
-      });
-    });
-  };
-  document.head.appendChild(gapiScript);
-}
-
 let tokenClient;
+let gapiReady = false;
+let gisReady = false;
 
-function initOAuth() {
+function checkBothReady() {
+  if (!gapiReady || !gisReady) return;
+
+  // Ambos carregados — inicializa OAuth
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.CLIENT_ID,
     scope: CONFIG.SCOPES,
@@ -129,6 +113,34 @@ function initOAuth() {
   }
 }
 
+function initGoogleAPI() {
+  // Carrega Google Identity Services
+  const gisScript = document.createElement('script');
+  gisScript.src = 'https://accounts.google.com/gsi/client';
+  gisScript.onload = () => {
+    gisReady = true;
+    checkBothReady();
+  };
+  document.head.appendChild(gisScript);
+
+  // Carrega gapi para Sheets
+  const gapiScript = document.createElement('script');
+  gapiScript.src = 'https://apis.google.com/js/api.js';
+  gapiScript.onload = () => {
+    gapi.load('client', async () => {
+      await gapi.client.init({
+        apiKey: CONFIG.API_KEY,
+        discoveryDocs: CONFIG.DISCOVERY_DOCS,
+      });
+      gapiReady = true;
+      checkBothReady();
+    });
+  };
+  document.head.appendChild(gapiScript);
+}
+
+function initOAuth() {} // mantido por compatibilidade
+
 function handleLogin() {
   if (CONFIG.CLIENT_ID === 'SEU_CLIENT_ID_AQUI') {
     alert('⚠️ Configure seu CLIENT_ID e API_KEY no arquivo app.js antes de usar.\n\nVeja o README.md para instruções.');
@@ -139,7 +151,8 @@ function handleLogin() {
 
 async function onSignIn() {
   document.getElementById('auth-screen').classList.add('hidden');
-  state.sheetId = localStorage.getItem('sheetId') || '';
+  // Prioriza SHEET_ID fixo no CONFIG, depois localStorage
+  state.sheetId = CONFIG.SHEET_ID || localStorage.getItem('sheetId') || '';
 
   if (!state.sheetId) {
     document.getElementById('setup-screen').classList.remove('hidden');

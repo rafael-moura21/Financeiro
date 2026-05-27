@@ -161,10 +161,21 @@
             <input type="date" id="novo-data" class="form-input" />
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="novo-conta-group">
           <label class="form-label">Conta</label>
           <select id="novo-conta" class="form-input">
             <option value="PicPay">PicPay</option>
+            <option value="Crédito Caixa">Crédito Caixa</option>
+            <option value="Reserva de Emergência">Reserva de Emergência</option>
+            <option value="Investimento">Investimento</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="novo-destino-group">
+          <label class="form-label">Para (destino)</label>
+          <select id="novo-destino" class="form-input">
+            <option value="Crédito Caixa">Crédito Caixa</option>
+            <option value="Reserva de Emergência">Reserva de Emergência</option>
+            <option value="Investimento">Investimento</option>
           </select>
         </div>
 

@@ -3,9 +3,9 @@
 // no Google Cloud Console (veja README.md)
 // ============================================================
 const CONFIG = {
-  CLIENT_ID: '75059835538-8j6hih1r8r0h508cnfa8et440ga814gb.apps.googleusercontent.com',        // Google OAuth Client ID
-  API_KEY: 'AIzaSyDtZiz6oN6ey_O1Oe3TxBpFniCxtN3FwN4',            // Google API Key
-  SHEET_ID: '1BnvbHIM6vFIONsHvPCvtQyHXlhIYqBrgV8cnneyzN8E',                            // Preenchido automaticamente ao criar
+  CLIENT_ID: 'SEU_CLIENT_ID_AQUI',        // Google OAuth Client ID
+  API_KEY: 'SUA_API_KEY_AQUI',            // Google API Key
+  SHEET_ID: '',                            // Preenchido automaticamente ao criar
   DISCOVERY_DOCS: [
     'https://sheets.googleapis.com/$discovery/rest?version=v4'
   ],
@@ -30,15 +30,12 @@ const CATEGORIAS = [
   { nome: 'Transporte',            icon: '🚗', cor: '#E6F1FB', corVal: '#185FA5', corBar: '#378ADD', tipo: 'debito' },
   { nome: 'Saúde',                 icon: '💊', cor: '#EAF3DE', corVal: '#3B6D11', corBar: '#639922', tipo: 'debito' },
   { nome: 'Lazer',                 icon: '🎮', cor: '#FBEAF0', corVal: '#993556', corBar: '#D4537E', tipo: 'debito' },
-  { nome: 'Moradia',               icon: '🏠', cor: '#FEF3E2', corVal: '#92520A', corBar: '#D4820A', tipo: 'debito' },
-  { nome: 'Cartão de Crédito',     icon: '🏠', cor: '#FEF3E2', corVal: '#92520A', corBar: '#D4820A', tipo: 'debito' },
   { nome: 'Salário',               icon: '💰', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Reembolso',             icon: '↩️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Ajuste Caixa',          icon: '⚖️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Saldo M-1',             icon: '📅', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Investimento',          icon: '📈', cor: '#EEEDFE', corVal: '#534AB7', corBar: '#7F77DD', tipo: 'transferencia' },
   { nome: 'Reserva de Emergência', icon: '🛡️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#5DCAA5', tipo: 'transferencia' },
-  { nome: 'Caixa Crédito',         icon: '🛡️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#5DCAA5', tipo: 'transferencia' },
 ];
 
 // Categorias filtradas por tipo
@@ -142,7 +139,7 @@ function handleLogin() {
 
 async function onSignIn() {
   document.getElementById('auth-screen').classList.add('hidden');
-  state.sheetId = CONFIG.SHEET_ID || localStorage.getItem('sheetId') || '';
+  state.sheetId = localStorage.getItem('sheetId') || '';
 
   if (!state.sheetId) {
     document.getElementById('setup-screen').classList.remove('hidden');
@@ -234,6 +231,7 @@ async function loadLancamentos() {
       tipo: r[3] || 'debito',
       categoria: r[4] || '',
       conta: r[5] || 'PicPay',
+      destino: r[6] || '',
     }));
   } catch (err) {
     console.error('Erro ao carregar:', err);
@@ -261,7 +259,8 @@ async function saveLancamento(lanc) {
         lanc.valor,
         lanc.tipo,
         lanc.categoria,
-        lanc.conta
+        lanc.conta,
+        lanc.destino || ''
       ]]
     }
   });
@@ -428,11 +427,36 @@ function renderLancamentoItem(l, showDelete = false) {
     <div class="lanc-icon" style="background:${cor};color:${iconeCor}">${icone}</div>
     <div class="lanc-info">
       <div class="lanc-desc">${l.descricao || l.categoria}</div>
-      <div class="lanc-meta">${l.categoria} · ${l.conta} · ${l.data}</div>
+      <div class="lanc-meta">${l.tipo === 'transferencia' ? l.conta + ' → ' + (l.destino || '?') : l.categoria} · ${l.conta} · ${l.data}</div>
     </div>
     <div class="lanc-val ${valClass}">${sinal}${fmtCompact(l.valor)}</div>
     ${showDelete ? `<button class="btn-delete" data-idx="${l.id}" title="Excluir">✕</button>` : ''}
   </div>`;
+}
+
+// ============================================================
+// CÁLCULO DE SALDO DAS CAIXAS (histórico completo)
+// ============================================================
+function calcularSaldoCaixas() {
+  // Cada transferência tem origem (conta) e destino
+  // Saldo = entradas - saídas - transferências saindo + transferências chegando
+  const caixas = { 'PicPay': 0, 'Crédito Caixa': 0, 'Reserva de Emergência': 0, 'Investimento': 0 };
+
+  state.lancamentos.forEach(l => {
+    if (l.tipo === 'credito') {
+      // Entrada de dinheiro na conta origem
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] += l.valor;
+    } else if (l.tipo === 'debito') {
+      // Saída de dinheiro da conta origem
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] -= l.valor;
+    } else if (l.tipo === 'transferencia') {
+      // Sai da origem, entra no destino
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] -= l.valor;
+      if (l.destino && caixas.hasOwnProperty(l.destino)) caixas[l.destino] += l.valor;
+    }
+  });
+
+  return caixas;
 }
 
 // ============================================================
@@ -442,16 +466,7 @@ function renderResumo() {
   const m = state.currentMonth, y = state.currentYear;
   document.getElementById('res-month-label').textContent = `${MESES[m]} ${y}`;
 
-  const lancs = getLancamentosMes(m, y);
-
-  // Saldo PicPay do mês
-  let entradas = 0, saidas = 0, guardado = 0;
-  lancs.forEach(l => {
-    if (l.tipo === 'credito') entradas += l.valor;
-    else if (l.tipo === 'transferencia') guardado += l.valor;
-    else saidas += l.valor;
-  });
-  const saldoPicPay = entradas - saidas - guardado;
+  const caixas = calcularSaldoCaixas();
 
   document.getElementById('resumo-contas').innerHTML = `
     <div class="resumo-item">
@@ -460,26 +475,17 @@ function renderResumo() {
         <div class="res-nome">PicPay</div>
         <div class="res-sub">Conta digital</div>
       </div>
-      <div class="res-val">${fmt(saldoPicPay)}</div>
+      <div class="res-val">${fmt(caixas['PicPay'])}</div>
     </div>`;
-
-  // Guardado acumulado (todo o histórico)
-  let totalInvest = 0, totalReserva = 0;
-  state.lancamentos.forEach(l => {
-    if (l.tipo === 'transferencia') {
-      if (l.categoria === 'Investimento') totalInvest += l.valor;
-      if (l.categoria === 'Reserva de Emergência') totalReserva += l.valor;
-    }
-  });
 
   document.getElementById('resumo-guardado').innerHTML = `
     <div class="resumo-item">
-      <div class="res-icon" style="background:#EEEDFE">📈</div>
+      <div class="res-icon" style="background:#FEF3E2">💳</div>
       <div class="res-info">
-        <div class="res-nome">Investimentos</div>
-        <div class="res-sub">acumulado total</div>
+        <div class="res-nome">Crédito Caixa</div>
+        <div class="res-sub">reserva para fatura</div>
       </div>
-      <div class="res-val">${fmt(totalInvest)}</div>
+      <div class="res-val">${fmt(caixas['Crédito Caixa'])}</div>
     </div>
     <div class="resumo-item">
       <div class="res-icon" style="background:#E1F5EE">🛡️</div>
@@ -487,10 +493,18 @@ function renderResumo() {
         <div class="res-nome">Reserva de Emergência</div>
         <div class="res-sub">acumulado total</div>
       </div>
-      <div class="res-val">${fmt(totalReserva)}</div>
+      <div class="res-val">${fmt(caixas['Reserva de Emergência'])}</div>
+    </div>
+    <div class="resumo-item">
+      <div class="res-icon" style="background:#EEEDFE">📈</div>
+      <div class="res-info">
+        <div class="res-nome">Investimentos</div>
+        <div class="res-sub">acumulado total</div>
+      </div>
+      <div class="res-val">${fmt(caixas['Investimento'])}</div>
     </div>`;
 
-  const patrimonio = saldoPicPay + totalInvest + totalReserva;
+  const patrimonio = Object.values(caixas).reduce((a,b) => a+b, 0);
   document.getElementById('resumo-patrimonio').textContent = fmt(patrimonio);
 }
 
@@ -637,8 +651,10 @@ function setupForm() {
     });
   });
 
-  // Inicializa categorias com o tipo padrão (débito)
+  // Inicializa categorias e destino com o tipo padrão (débito)
   atualizarCategorias(state.tipoSelecionado);
+  toggleDestino(state.tipoSelecionado);
+  atualizarOpcoesDestino();
 
   // Máscara de valor
   const valorInput = document.getElementById('novo-valor');
@@ -653,6 +669,40 @@ function setupForm() {
   const hoje = new Date();
   document.getElementById('novo-data').value = hoje.toISOString().split('T')[0];
 
+  // Mostra/oculta campo destino conforme tipo
+  function toggleDestino(tipo) {
+    const destinoGroup = document.getElementById('novo-destino-group');
+    const contaGroup = document.getElementById('novo-conta-group');
+    if (tipo === 'transferencia') {
+      destinoGroup.classList.remove('hidden');
+      contaGroup.querySelector('label').textContent = 'De (origem)';
+    } else {
+      destinoGroup.classList.add('hidden');
+      contaGroup.querySelector('label').textContent = 'Conta';
+    }
+  }
+
+  // Atualiza destino ao mudar tipo (garante que não selecione mesma conta)
+  document.getElementById('novo-conta').addEventListener('change', () => {
+    atualizarOpcoesDestino();
+  });
+
+  function atualizarOpcoesDestino() {
+    const origem = document.getElementById('novo-conta').value;
+    const destSel = document.getElementById('novo-destino');
+    const CAIXAS = ['PicPay', 'Crédito Caixa', 'Reserva de Emergência', 'Investimento'];
+    destSel.innerHTML = CAIXAS.filter(c => c !== origem)
+      .map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  // Hook no tipo selector para mostrar/ocultar destino
+  document.querySelectorAll('.tipo-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      toggleDestino(btn.dataset.tipo);
+      atualizarOpcoesDestino();
+    });
+  });
+
   // Salvar
   document.getElementById('btn-salvar').addEventListener('click', async () => {
     const valorStr = document.getElementById('novo-valor').value.replace(/[^\d,]/g,'').replace(',','.');
@@ -661,6 +711,9 @@ function setupForm() {
     const cat = document.getElementById('novo-categoria').value;
     const dataRaw = document.getElementById('novo-data').value;
     const conta = document.getElementById('novo-conta').value;
+    const destino = state.tipoSelecionado === 'transferencia'
+      ? document.getElementById('novo-destino').value
+      : '';
 
     if (!valor || valor <= 0) { showFeedback('Informe um valor válido', 'error'); return; }
     if (!dataRaw) { showFeedback('Informe a data', 'error'); return; }
@@ -670,11 +723,12 @@ function setupForm() {
 
     const lanc = {
       data: dataFmt,
-      descricao: desc || cat,
+      descricao: desc || (state.tipoSelecionado === 'transferencia' ? `${conta} → ${destino}` : cat),
       valor,
       tipo: state.tipoSelecionado,
-      categoria: cat,
-      conta
+      categoria: state.tipoSelecionado === 'transferencia' ? 'Transferência' : cat,
+      conta,
+      destino
     };
 
     document.getElementById('btn-salvar-text').textContent = 'salvando...';

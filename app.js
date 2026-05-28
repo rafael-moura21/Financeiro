@@ -336,32 +336,31 @@ function renderHome() {
 
   const lancs = getLancamentosMes(m, y);
 
-  let entradas = 0, saidas = 0, guardado = 0;
+  let entradas = 0, saidas = 0, reserva = 0, investimento = 0;
   lancs.forEach(l => {
     if (l.tipo === 'credito') entradas += l.valor;
     else if (l.tipo === 'debito') saidas += l.valor;
     else if (l.tipo === 'transferencia') {
-      // Se sai do PicPay → é guardado (reduz saldo)
-      if (l.conta === 'PicPay') guardado += l.valor;
-      // Se entra no PicPay vindo de outra caixa → é entrada (aumenta saldo)
-      else if (l.destino === 'PicPay') entradas += l.valor;
+      if (l.conta === 'PicPay') {
+        if (l.destino === 'Reserva de Emergência') reserva += l.valor;
+        else if (l.destino === 'Investimento') investimento += l.valor;
+      }
     }
   });
 
+  const guardado = reserva + investimento;
   const saldo = entradas - saidas - guardado;
   document.getElementById('home-saldo').textContent = fmt(saldo);
-  let reserva = 0, investimento = 0;
-  lancs.forEach(l => {
-    if (l.tipo === 'transferencia' && l.conta === 'PicPay') {
-      if (l.destino === 'Reserva de Emergência') reserva += l.valor;
-      if (l.destino === 'Investimento') investimento += l.valor;
-    }
-  });
-
   document.getElementById('home-entradas').textContent = fmtCompact(entradas);
   document.getElementById('home-saidas').textContent = fmtCompact(saidas);
   document.getElementById('home-reserva').textContent = fmtCompact(reserva);
   document.getElementById('home-investimento').textContent = fmtCompact(investimento);
+  });
+
+  #document.getElementById('home-entradas').textContent = fmtCompact(entradas);
+  #document.getElementById('home-saidas').textContent = fmtCompact(saidas);
+  #document.getElementById('home-reserva').textContent = fmtCompact(reserva);
+  #document.getElementById('home-investimento').textContent = fmtCompact(investimento);
 
   // Categorias
   const catEl = document.getElementById('home-categorias');
@@ -533,6 +532,63 @@ function renderResumo() {
 
   const patrimonio = Object.values(caixas).reduce((a,b) => a+b, 0);
   document.getElementById('resumo-patrimonio').textContent = fmt(patrimonio);
+
+  // Gráfico de pizza — gastos por categoria
+  renderPizzaCategorias();
+}
+
+function renderPizzaCategorias() {
+  const canvas = document.getElementById('chart-pizza');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 280;
+  const H = W;
+  canvas.width = W;
+  canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  const despesas = state.lancamentos.filter(l => l.tipo === 'debito');
+  const porCat = {};
+  despesas.forEach(l => { porCat[l.categoria] = (porCat[l.categoria] || 0) + l.valor; });
+  const total = Object.values(porCat).reduce((a,b) => a+b, 0);
+  if (total === 0) return;
+
+  const cores = ['#D85A30','#378ADD','#639922','#D4537E','#D4820A','#534AB7','#1D9E75'];
+  const entries = Object.entries(porCat).sort((a,b) => b[1]-a[1]);
+
+  const cx = W/2, cy = H/2, r = W * 0.38, rInner = W * 0.22;
+  let angle = -Math.PI/2;
+
+  entries.forEach(([cat, val], i) => {
+    const slice = (val/total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, angle, angle + slice);
+    ctx.closePath();
+    ctx.fillStyle = cores[i % cores.length];
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    angle += slice;
+  });
+
+  // Buraco do meio (donut)
+  ctx.beginPath();
+  ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  // Legenda
+  const legEl = document.getElementById('pizza-legenda');
+  legEl.innerHTML = entries.map(([cat, val], i) => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="width:10px;height:10px;border-radius:2px;background:${cores[i % cores.length]};flex-shrink:0;"></div>
+      <span style="font-size:0.78rem;color:var(--text2);flex:1;">${cat}</span>
+      <span style="font-size:0.78rem;font-family:var(--font-mono);font-weight:500;color:var(--text);">${fmtCompact(val)}</span>
+      <span style="font-size:0.72rem;color:var(--text3);">${Math.round((val/total)*100)}%</span>
+    </div>`).join('');
+}
 }
 
 // ============================================================

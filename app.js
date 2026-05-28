@@ -169,24 +169,27 @@ async function salvarConfigNoDrive(sheetId) {
       });
     } else {
       // Cria novo
+      const boundary = 'bound';
+      const metadata = JSON.stringify({ name: CONFIG_FILENAME, mimeType: 'application/json' });
+      const multipart = [
+        '--' + boundary,
+        'Content-Type: application/json',
+        '',
+        metadata,
+        '--' + boundary,
+        'Content-Type: application/json',
+        '',
+        content,
+        '--' + boundary + '--'
+      ].join('\r\n');
+
       await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
-          'Content-Type': 'multipart/related; boundary=bound'
+          'Content-Type': 'multipart/related; boundary=' + boundary
         },
-        body: '--bound
-Content-Type: application/json
-
-' +
-              JSON.stringify({ name: CONFIG_FILENAME, mimeType: 'application/json' }) +
-              '
---bound
-Content-Type: application/json
-
-' +
-              content + '
---bound--'
+        body: multipart
       });
     }
   } catch(err) {

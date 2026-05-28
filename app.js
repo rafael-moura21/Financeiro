@@ -232,7 +232,7 @@ async function loadLancamentos() {
   try {
     const res = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: state.sheetId,
-      range: 'Lançamentos!A2:F'
+      range: 'Lançamentos!A2:G'
     });
 
     const rows = res.result.values || [];

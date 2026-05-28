@@ -350,9 +350,18 @@ function renderHome() {
 
   const saldo = entradas - saidas - guardado;
   document.getElementById('home-saldo').textContent = fmt(saldo);
+  let reserva = 0, investimento = 0;
+  lancs.forEach(l => {
+    if (l.tipo === 'transferencia' && l.conta === 'PicPay') {
+      if (l.destino === 'Reserva de Emergência') reserva += l.valor;
+      if (l.destino === 'Investimento') investimento += l.valor;
+    }
+  });
+
   document.getElementById('home-entradas').textContent = fmtCompact(entradas);
   document.getElementById('home-saidas').textContent = fmtCompact(saidas);
-  document.getElementById('home-guardado').textContent = fmtCompact(guardado);
+  document.getElementById('home-reserva').textContent = fmtCompact(reserva);
+  document.getElementById('home-investimento').textContent = fmtCompact(investimento);
 
   // Categorias
   const catEl = document.getElementById('home-categorias');

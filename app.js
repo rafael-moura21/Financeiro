@@ -1,14 +1,11 @@
 // ============================================================
-// CONFIGURAÇÃO — preencha com seus dados após criar o projeto
-// no Google Cloud Console (veja README.md)
+// CONFIGURAÇÃO
 // ============================================================
 const CONFIG = {
-  CLIENT_ID: '75059835538-8j6hih1r8r0h508cnfa8et440ga814gb.apps.googleusercontent.com',        // Google OAuth Client ID
-  API_KEY: 'AIzaSyDtZiz6oN6ey_O1Oe3TxBpFniCxtN3FwN4',            // Google API Key
-  SHEET_ID: '1BnvbHIM6vFIONsHvPCvtQyHXlhIYqBrgV8cnneyzN8E',                            // Preenchido automaticamente ao criar
-  DISCOVERY_DOCS: [
-    'https://sheets.googleapis.com/$discovery/rest?version=v4'
-  ],
+  CLIENT_ID: '75059835538-8j6hih1r8r0h508cnfa8et440ga814gb.apps.googleusercontent.com',
+  API_KEY: 'AIzaSyDtZiz6oN6ey_O1Oe3TxBpFniCxtN3FwN4',
+  SHEET_ID: '1BnvbHIM6vFIONsHvPCvtQyHXlhIYqBrgV8cnneyzN8E',
+  DISCOVERY_DOCS: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
   SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file'
 };
 
@@ -30,24 +27,24 @@ const CATEGORIAS = [
   { nome: 'Transporte',            icon: '🚗', cor: '#E6F1FB', corVal: '#185FA5', corBar: '#378ADD', tipo: 'debito' },
   { nome: 'Saúde',                 icon: '💊', cor: '#EAF3DE', corVal: '#3B6D11', corBar: '#639922', tipo: 'debito' },
   { nome: 'Lazer',                 icon: '🎮', cor: '#FBEAF0', corVal: '#993556', corBar: '#D4537E', tipo: 'debito' },
+  { nome: 'Moradia',               icon: '🏠', cor: '#FEF3E2', corVal: '#92520A', corBar: '#D4820A', tipo: 'debito' },
+  { nome: 'Cartão de Crédito',     icon: '💳', cor: '#FAECE7', corVal: '#993C1D', corBar: '#D85A30', tipo: 'debito' },
   { nome: 'Salário',               icon: '💰', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Reembolso',             icon: '↩️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Ajuste Caixa',          icon: '⚖️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Saldo M-1',             icon: '📅', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
-  { nome: 'Investimento',          icon: '📈', cor: '#EEEDFE', corVal: '#534AB7', corBar: '#7F77DD', tipo: 'transferencia' },
-  { nome: 'Reserva de Emergência', icon: '🛡️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#5DCAA5', tipo: 'transferencia' },
 ];
 
-// Categorias filtradas por tipo
 const CATS_POR_TIPO = {
-  debito:       CATEGORIAS.filter(c => c.tipo === 'debito'),
-  credito:      CATEGORIAS.filter(c => c.tipo === 'credito'),
-  transferencia: CATEGORIAS.filter(c => c.tipo === 'transferencia'),
+  debito:        CATEGORIAS.filter(c => c.tipo === 'debito'),
+  credito:       CATEGORIAS.filter(c => c.tipo === 'credito'),
+  transferencia: [],
 };
 
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const CAIXAS = ['PicPay', 'Crédito Caixa', 'Reserva de Emergência', 'Investimento'];
 
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
 // ============================================================
@@ -92,7 +89,6 @@ let gisReady = false;
 function checkBothReady() {
   if (!gapiReady || !gisReady) return;
 
-  // Ambos carregados — inicializa OAuth
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.CLIENT_ID,
     scope: CONFIG.SCOPES,
@@ -104,7 +100,6 @@ function checkBothReady() {
     }
   });
 
-  // Verifica se tem token salvo
   const savedToken = localStorage.getItem('gToken');
   if (savedToken) {
     gapi.client.setToken({ access_token: savedToken });
@@ -114,24 +109,16 @@ function checkBothReady() {
 }
 
 function initGoogleAPI() {
-  // Carrega Google Identity Services
   const gisScript = document.createElement('script');
   gisScript.src = 'https://accounts.google.com/gsi/client';
-  gisScript.onload = () => {
-    gisReady = true;
-    checkBothReady();
-  };
+  gisScript.onload = () => { gisReady = true; checkBothReady(); };
   document.head.appendChild(gisScript);
 
-  // Carrega gapi para Sheets
   const gapiScript = document.createElement('script');
   gapiScript.src = 'https://apis.google.com/js/api.js';
   gapiScript.onload = () => {
     gapi.load('client', async () => {
-      await gapi.client.init({
-        apiKey: CONFIG.API_KEY,
-        discoveryDocs: CONFIG.DISCOVERY_DOCS,
-      });
+      await gapi.client.init({ apiKey: CONFIG.API_KEY, discoveryDocs: CONFIG.DISCOVERY_DOCS });
       gapiReady = true;
       checkBothReady();
     });
@@ -139,11 +126,9 @@ function initGoogleAPI() {
   document.head.appendChild(gapiScript);
 }
 
-function initOAuth() {} // mantido por compatibilidade
-
 function handleLogin() {
   if (CONFIG.CLIENT_ID === 'SEU_CLIENT_ID_AQUI') {
-    alert('⚠️ Configure seu CLIENT_ID e API_KEY no arquivo app.js antes de usar.\n\nVeja o README.md para instruções.');
+    alert('Configure seu CLIENT_ID e API_KEY no arquivo app.js antes de usar.');
     return;
   }
   tokenClient.requestAccessToken({ prompt: 'consent' });
@@ -151,9 +136,7 @@ function handleLogin() {
 
 async function onSignIn() {
   document.getElementById('auth-screen').classList.add('hidden');
-  // Prioriza SHEET_ID fixo no CONFIG, depois localStorage
   state.sheetId = CONFIG.SHEET_ID || localStorage.getItem('sheetId') || '';
-
   if (!state.sheetId) {
     document.getElementById('setup-screen').classList.remove('hidden');
   } else {
@@ -166,9 +149,7 @@ async function onSignIn() {
 // ============================================================
 async function createSheet() {
   document.getElementById('setup-loading').classList.remove('hidden');
-
   try {
-    // Cria a planilha
     const res = await gapi.client.sheets.spreadsheets.create({
       resource: {
         properties: { title: 'Meu Financeiro - Controle' },
@@ -184,31 +165,20 @@ async function createSheet() {
     localStorage.setItem('sheetId', sheetId);
     state.sheetId = sheetId;
 
-    // Cria cabeçalhos
     await gapi.client.sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: sheetId,
       resource: {
         valueInputOption: 'RAW',
         data: [
-          {
-            range: 'Lançamentos!A1:F1',
-            values: [['Data', 'Descrição', 'Valor', 'Tipo', 'Categoria', 'Conta']]
-          },
-          {
-            range: 'Categorias!A1:A7',
-            values: [['Alimentação'],['Transporte'],['Saúde'],['Lazer'],['Salário'],['Investimento'],['Reserva de Emergência']]
-          },
-          {
-            range: 'Contas!A1:A1',
-            values: [['PicPay']]
-          }
+          { range: 'Lançamentos!A1:G1', values: [['Data','Descrição','Valor','Tipo','Categoria','Conta','Destino']] },
+          { range: 'Categorias!A1:A6', values: [['Alimentação'],['Transporte'],['Saúde'],['Lazer'],['Moradia'],['Cartão de Crédito']] },
+          { range: 'Contas!A1:A4',     values: [['PicPay'],['Crédito Caixa'],['Reserva de Emergência'],['Investimento']] }
         ]
       }
     });
 
     document.getElementById('setup-step-1').classList.add('hidden');
     document.getElementById('setup-step-2').classList.remove('hidden');
-
   } catch (err) {
     console.error(err);
     alert('Erro ao criar planilha. Verifique as configurações e tente novamente.');
@@ -234,25 +204,20 @@ async function loadLancamentos() {
       spreadsheetId: state.sheetId,
       range: 'Lançamentos!A2:G'
     });
-
     const rows = res.result.values || [];
     state.lancamentos = rows.map((r, i) => ({
       id: i,
-      data: r[0] || '',
+      data:      r[0] || '',
       descricao: r[1] || '',
-      valor: parseFloat(r[2]) || 0,
-      tipo: r[3] || 'debito',
+      valor:     parseFloat(r[2]) || 0,
+      tipo:      r[3] || 'debito',
       categoria: r[4] || '',
-      conta: r[5] || 'PicPay',
-      destino: r[6] || '',
+      conta:     r[5] || 'PicPay',
+      destino:   r[6] || '',
     }));
   } catch (err) {
     console.error('Erro ao carregar:', err);
-    // Token expirou — força novo login
-    if (err.status === 401) {
-      localStorage.removeItem('gToken');
-      location.reload();
-    }
+    if (err.status === 401) { localStorage.removeItem('gToken'); location.reload(); }
   }
 }
 
@@ -262,54 +227,27 @@ async function loadLancamentos() {
 async function saveLancamento(lanc) {
   await gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: state.sheetId,
-    range: 'Lançamentos!A:F',
+    range: 'Lançamentos!A:G',
     valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
-    resource: {
-      values: [[
-        lanc.data,
-        lanc.descricao,
-        lanc.valor,
-        lanc.tipo,
-        lanc.categoria,
-        lanc.conta,
-        lanc.destino || ''
-      ]]
-    }
+    resource: { values: [[lanc.data, lanc.descricao, lanc.valor, lanc.tipo, lanc.categoria, lanc.conta, lanc.destino || '']] }
   });
 }
 
 async function deleteLancamento(rowIndex) {
-  // rowIndex é 0-based na nossa array; na planilha é linha rowIndex+2 (cabeçalho na linha 1)
-  const sheetRowIndex = rowIndex + 1; // 0-based para API
-
-  // Primeiro precisamos obter o sheetId interno da aba Lançamentos
+  const sheetRowIndex = rowIndex + 1;
   const meta = await gapi.client.sheets.spreadsheets.get({
-    spreadsheetId: state.sheetId,
-    fields: 'sheets.properties'
+    spreadsheetId: state.sheetId, fields: 'sheets.properties'
   });
-
   const sheetTabId = meta.result.sheets.find(s => s.properties.title === 'Lançamentos').properties.sheetId;
-
   await gapi.client.sheets.spreadsheets.batchUpdate({
     spreadsheetId: state.sheetId,
-    resource: {
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId: sheetTabId,
-            dimension: 'ROWS',
-            startIndex: sheetRowIndex,
-            endIndex: sheetRowIndex + 1
-          }
-        }
-      }]
-    }
+    resource: { requests: [{ deleteDimension: { range: { sheetId: sheetTabId, dimension: 'ROWS', startIndex: sheetRowIndex, endIndex: sheetRowIndex + 1 } } }] }
   });
 }
 
 // ============================================================
-// FILTROS POR MÊS
+// FILTROS POR MÊS / ANO
 // ============================================================
 function getLancamentosMes(month, year) {
   return state.lancamentos.filter(l => {
@@ -322,9 +260,26 @@ function getLancamentosMes(month, year) {
 function getLancamentosAno(year) {
   return state.lancamentos.filter(l => {
     if (!l.data) return false;
-    const parts = l.data.split('/');
-    return parseInt(parts[2]) === year;
+    return parseInt(l.data.split('/')[2]) === year;
   });
+}
+
+// ============================================================
+// CÁLCULO DE SALDO DAS CAIXAS (histórico completo)
+// ============================================================
+function calcularSaldoCaixas() {
+  const caixas = { 'PicPay': 0, 'Crédito Caixa': 0, 'Reserva de Emergência': 0, 'Investimento': 0 };
+  state.lancamentos.forEach(l => {
+    if (l.tipo === 'credito') {
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] += l.valor;
+    } else if (l.tipo === 'debito') {
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] -= l.valor;
+    } else if (l.tipo === 'transferencia') {
+      if (caixas.hasOwnProperty(l.conta))    caixas[l.conta]    -= l.valor;
+      if (l.destino && caixas.hasOwnProperty(l.destino)) caixas[l.destino] += l.valor;
+    }
+  });
+  return caixas;
 }
 
 // ============================================================
@@ -340,24 +295,22 @@ function renderHome() {
   lancs.forEach(l => {
     if (l.tipo === 'credito') entradas += l.valor;
     else if (l.tipo === 'debito') saidas += l.valor;
-    else if (l.tipo === 'transferencia') {
-      if (l.conta === 'PicPay') {
-        if (l.destino === 'Reserva de Emergência') reserva += l.valor;
-        else if (l.destino === 'Investimento') investimento += l.valor;
-      }
+    else if (l.tipo === 'transferencia' && l.conta === 'PicPay') {
+      if (l.destino === 'Reserva de Emergência') reserva += l.valor;
+      else if (l.destino === 'Investimento') investimento += l.valor;
     }
   });
 
   const guardado = reserva + investimento;
   const saldo = entradas - saidas - guardado;
+
   document.getElementById('home-saldo').textContent = fmt(saldo);
   document.getElementById('home-entradas').textContent = fmtCompact(entradas);
   document.getElementById('home-saidas').textContent = fmtCompact(saidas);
   document.getElementById('home-reserva').textContent = fmtCompact(reserva);
   document.getElementById('home-investimento').textContent = fmtCompact(investimento);
-  });
 
-  // Categorias
+  // Gastos por categoria
   const catEl = document.getElementById('home-categorias');
   const despesas = lancs.filter(l => l.tipo === 'debito');
   const totalDespesas = despesas.reduce((a,b) => a + b.valor, 0);
@@ -368,7 +321,6 @@ function renderHome() {
     const porCat = {};
     despesas.forEach(l => { porCat[l.categoria] = (porCat[l.categoria] || 0) + l.valor; });
     const sorted = Object.entries(porCat).sort((a,b) => b[1]-a[1]);
-
     catEl.innerHTML = sorted.map(([cat, val]) => {
       const info = CATEGORIAS.find(c => c.nome === cat) || { icon: '📦', cor: '#f0f0f0', corVal: '#333', corBar: '#888' };
       const pct = totalDespesas > 0 ? Math.round((val/totalDespesas)*100) : 0;
@@ -401,11 +353,9 @@ function renderLancamentos() {
   document.getElementById('lanc-month-label').textContent = `${MESES[m]} ${y}`;
 
   let lancs = getLancamentosMes(m, y);
-
-  // Filtros
-  const catF = document.getElementById('filter-categoria').value;
+  const catF  = document.getElementById('filter-categoria').value;
   const tipoF = document.getElementById('filter-tipo').value;
-  if (catF) lancs = lancs.filter(l => l.categoria === catF);
+  if (catF)  lancs = lancs.filter(l => l.categoria === catF);
   if (tipoF) lancs = lancs.filter(l => l.tipo === tipoF);
 
   const el = document.getElementById('lista-lancamentos');
@@ -415,8 +365,6 @@ function renderLancamentos() {
   }
 
   el.innerHTML = [...lancs].reverse().map(l => renderLancamentoItem(l, true)).join('');
-
-  // Attach delete handlers
   el.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('Excluir este lançamento?')) return;
@@ -426,10 +374,7 @@ function renderLancamentos() {
         await deleteLancamento(idx);
         await loadLancamentos();
         renderAll();
-      } catch(e) {
-        console.error(e);
-        alert('Erro ao excluir.');
-      }
+      } catch(e) { console.error(e); alert('Erro ao excluir.'); }
       hideLoading();
     });
   });
@@ -437,47 +382,24 @@ function renderLancamentos() {
 
 function renderLancamentoItem(l, showDelete = false) {
   const isCredito = l.tipo === 'credito';
-  const isTransf = l.tipo === 'transferencia';
-  const sinal = isCredito ? '+' : '-';
-  const cor = isCredito ? '#E1F5EE' : isTransf ? '#EEEDFE' : '#FAECE7';
-  const icone = isCredito ? '↓' : isTransf ? '⇄' : '↑';
-  const iconeCor = isCredito ? '#0F6E56' : isTransf ? '#534AB7' : '#993C1D';
-  const valClass = l.tipo;
+  const isTransf  = l.tipo === 'transferencia';
+  const sinal     = isCredito ? '+' : '-';
+  const cor       = isCredito ? '#E1F5EE' : isTransf ? '#EEEDFE' : '#FAECE7';
+  const icone     = isCredito ? '↓' : isTransf ? '⇄' : '↑';
+  const iconeCor  = isCredito ? '#0F6E56' : isTransf ? '#534AB7' : '#993C1D';
+  const meta      = isTransf
+    ? `${l.conta} → ${l.destino || '?'} · ${l.data}`
+    : `${l.categoria} · ${l.conta} · ${l.data}`;
 
   return `<div class="lancamento-item">
     <div class="lanc-icon" style="background:${cor};color:${iconeCor}">${icone}</div>
     <div class="lanc-info">
       <div class="lanc-desc">${l.descricao || l.categoria}</div>
-      <div class="lanc-meta">${l.tipo === 'transferencia' ? l.conta + ' → ' + (l.destino || '?') : l.categoria} · ${l.conta} · ${l.data}</div>
+      <div class="lanc-meta">${meta}</div>
     </div>
-    <div class="lanc-val ${valClass}">${sinal}${fmtCompact(l.valor)}</div>
+    <div class="lanc-val ${l.tipo}">${sinal}${fmtCompact(l.valor)}</div>
     ${showDelete ? `<button class="btn-delete" data-idx="${l.id}" title="Excluir">✕</button>` : ''}
   </div>`;
-}
-
-// ============================================================
-// CÁLCULO DE SALDO DAS CAIXAS (histórico completo)
-// ============================================================
-function calcularSaldoCaixas() {
-  // Cada transferência tem origem (conta) e destino
-  // Saldo = entradas - saídas - transferências saindo + transferências chegando
-  const caixas = { 'PicPay': 0, 'Crédito Caixa': 0, 'Reserva de Emergência': 0, 'Investimento': 0 };
-
-  state.lancamentos.forEach(l => {
-    if (l.tipo === 'credito') {
-      // Entrada de dinheiro na conta origem
-      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] += l.valor;
-    } else if (l.tipo === 'debito') {
-      // Saída de dinheiro da conta origem
-      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] -= l.valor;
-    } else if (l.tipo === 'transferencia') {
-      // Sai da origem, entra no destino
-      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] -= l.valor;
-      if (l.destino && caixas.hasOwnProperty(l.destino)) caixas[l.destino] += l.valor;
-    }
-  });
-
-  return caixas;
 }
 
 // ============================================================
@@ -492,43 +414,30 @@ function renderResumo() {
   document.getElementById('resumo-contas').innerHTML = `
     <div class="resumo-item">
       <div class="res-icon" style="background:#E1F5EE">💳</div>
-      <div class="res-info">
-        <div class="res-nome">PicPay</div>
-        <div class="res-sub">Conta digital</div>
-      </div>
+      <div class="res-info"><div class="res-nome">PicPay</div><div class="res-sub">Conta digital</div></div>
       <div class="res-val">${fmt(caixas['PicPay'])}</div>
     </div>`;
 
   document.getElementById('resumo-guardado').innerHTML = `
     <div class="resumo-item">
       <div class="res-icon" style="background:#FEF3E2">💳</div>
-      <div class="res-info">
-        <div class="res-nome">Crédito Caixa</div>
-        <div class="res-sub">reserva para fatura</div>
-      </div>
+      <div class="res-info"><div class="res-nome">Crédito Caixa</div><div class="res-sub">reserva para fatura</div></div>
       <div class="res-val">${fmt(caixas['Crédito Caixa'])}</div>
     </div>
     <div class="resumo-item">
       <div class="res-icon" style="background:#E1F5EE">🛡️</div>
-      <div class="res-info">
-        <div class="res-nome">Reserva de Emergência</div>
-        <div class="res-sub">acumulado total</div>
-      </div>
+      <div class="res-info"><div class="res-nome">Reserva de Emergência</div><div class="res-sub">acumulado total</div></div>
       <div class="res-val">${fmt(caixas['Reserva de Emergência'])}</div>
     </div>
     <div class="resumo-item">
       <div class="res-icon" style="background:#EEEDFE">📈</div>
-      <div class="res-info">
-        <div class="res-nome">Investimentos</div>
-        <div class="res-sub">acumulado total</div>
-      </div>
+      <div class="res-info"><div class="res-nome">Investimentos</div><div class="res-sub">acumulado total</div></div>
       <div class="res-val">${fmt(caixas['Investimento'])}</div>
     </div>`;
 
   const patrimonio = Object.values(caixas).reduce((a,b) => a+b, 0);
   document.getElementById('resumo-patrimonio').textContent = fmt(patrimonio);
 
-  // Gráfico de pizza — gastos por categoria
   renderPizzaCategorias();
 }
 
@@ -536,11 +445,10 @@ function renderPizzaCategorias() {
   const canvas = document.getElementById('chart-pizza');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 280;
-  const H = W;
+  const W = canvas.offsetWidth || 200;
   canvas.width = W;
-  canvas.height = H;
-  ctx.clearRect(0, 0, W, H);
+  canvas.height = W;
+  ctx.clearRect(0, 0, W, W);
 
   const despesas = state.lancamentos.filter(l => l.tipo === 'debito');
   const porCat = {};
@@ -550,8 +458,7 @@ function renderPizzaCategorias() {
 
   const cores = ['#D85A30','#378ADD','#639922','#D4537E','#D4820A','#534AB7','#1D9E75'];
   const entries = Object.entries(porCat).sort((a,b) => b[1]-a[1]);
-
-  const cx = W/2, cy = H/2, r = W * 0.38, rInner = W * 0.22;
+  const cx = W/2, cy = W/2, r = W*0.38, rInner = W*0.22;
   let angle = -Math.PI/2;
 
   entries.forEach(([cat, val], i) => {
@@ -568,29 +475,28 @@ function renderPizzaCategorias() {
     angle += slice;
   });
 
-  // Buraco do meio (donut)
+  // Buraco donut
   ctx.beginPath();
-  ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+  ctx.arc(cx, cy, rInner, 0, Math.PI*2);
   ctx.fillStyle = 'white';
   ctx.fill();
 
   // Legenda
   const legEl = document.getElementById('pizza-legenda');
-  legEl.innerHTML = entries.map(([cat, val], i) => `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <div style="width:10px;height:10px;border-radius:2px;background:${cores[i % cores.length]};flex-shrink:0;"></div>
-      <span style="font-size:0.78rem;color:var(--text2);flex:1;">${cat}</span>
-      <span style="font-size:0.78rem;font-family:var(--font-mono);font-weight:500;color:var(--text);">${fmtCompact(val)}</span>
-      <span style="font-size:0.72rem;color:var(--text3);">${Math.round((val/total)*100)}%</span>
-    </div>`).join('');
-}
+  if (legEl) {
+    legEl.innerHTML = entries.map(([cat, val], i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="width:10px;height:10px;border-radius:2px;background:${cores[i%cores.length]};flex-shrink:0;"></div>
+        <span style="font-size:0.78rem;color:var(--text2);flex:1;">${cat}</span>
+        <span style="font-size:0.78rem;font-family:var(--font-mono);font-weight:500;">${fmtCompact(val)}</span>
+        <span style="font-size:0.72rem;color:var(--text3);">${Math.round((val/total)*100)}%</span>
+      </div>`).join('');
+  }
 }
 
 // ============================================================
 // RENDER ANUAL
 // ============================================================
-let chartInstance = null;
-
 function renderAnual() {
   const y = state.anualYear;
   document.getElementById('anual-year-label').textContent = y;
@@ -599,16 +505,15 @@ function renderAnual() {
   let totalEnt = 0, totalSai = 0, totalGua = 0;
   lancs.forEach(l => {
     if (l.tipo === 'credito') totalEnt += l.valor;
-    else if (l.tipo === 'transferencia') totalGua += l.valor;
-    else totalSai += l.valor;
+    else if (l.tipo === 'debito') totalSai += l.valor;
+    else if (l.tipo === 'transferencia' && l.conta === 'PicPay') totalGua += l.valor;
   });
 
   document.getElementById('anual-entradas').textContent = fmtCompact(totalEnt);
-  document.getElementById('anual-saidas').textContent = fmtCompact(totalSai);
+  document.getElementById('anual-saidas').textContent   = fmtCompact(totalSai);
   document.getElementById('anual-guardado').textContent = fmtCompact(totalGua);
-  document.getElementById('anual-sobra').textContent = fmtCompact(totalEnt - totalSai - totalGua);
+  document.getElementById('anual-sobra').textContent    = fmtCompact(totalEnt - totalSai - totalGua);
 
-  // Dados por mês para o gráfico
   const entMes = Array(12).fill(0);
   const saiMes = Array(12).fill(0);
   lancs.forEach(l => {
@@ -618,83 +523,54 @@ function renderAnual() {
     else if (l.tipo === 'debito') saiMes[mes] += l.valor;
   });
 
-  // Gráfico com canvas
   const canvas = document.getElementById('chart-anual');
   const ctx = canvas.getContext('2d');
   const W = canvas.offsetWidth || 300;
   const H = 120;
   canvas.width = W;
   canvas.height = H;
-
   ctx.clearRect(0,0,W,H);
 
   const maxVal = Math.max(...entMes, ...saiMes, 1);
-  const barW = (W / 12) * 0.35;
-  const gap = (W / 12) * 0.08;
+  const barW   = (W/12)*0.35;
+  const gap    = (W/12)*0.08;
   const chartH = H - 20;
 
   MESES_ABREV.forEach((mes, i) => {
-    const x = (W / 12) * i + (W / 24);
-    const hEnt = (entMes[i] / maxVal) * chartH;
-    const hSai = (saiMes[i] / maxVal) * chartH;
+    const x = (W/12)*i + (W/24);
+    const hEnt = (entMes[i]/maxVal)*chartH;
+    const hSai = (saiMes[i]/maxVal)*chartH;
     const isFuture = (i > new Date().getMonth() && y === new Date().getFullYear());
-    const alpha = isFuture ? 0.25 : 1;
-
-    ctx.globalAlpha = alpha;
-
-    // Barra entrada
+    ctx.globalAlpha = isFuture ? 0.25 : 1;
     ctx.fillStyle = '#1D9E75';
-    ctx.beginPath();
-    ctx.roundRect(x - barW - gap, chartH - hEnt, barW, hEnt, [3,3,0,0]);
-    ctx.fill();
-
-    // Barra saída
+    ctx.beginPath(); ctx.roundRect(x-barW-gap, chartH-hEnt, barW, hEnt, [3,3,0,0]); ctx.fill();
     ctx.fillStyle = '#F0997B';
-    ctx.beginPath();
-    ctx.roundRect(x + gap, chartH - hSai, barW, hSai, [3,3,0,0]);
-    ctx.fill();
-
+    ctx.beginPath(); ctx.roundRect(x+gap, chartH-hSai, barW, hSai, [3,3,0,0]); ctx.fill();
     ctx.globalAlpha = 1;
-
-    // Label
     ctx.fillStyle = '#8a9390';
     ctx.font = '9px DM Sans, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(mes, x, H - 3);
+    ctx.fillText(mes, x, H-3);
   });
 
-  // Destaques
-  const maisGasto = saiMes.indexOf(Math.max(...saiMes));
-  const maisSobra = entMes.map((e,i) => e - saiMes[i]).indexOf(Math.max(...entMes.map((e,i) => e - saiMes[i])));
-
-  // Categoria mais gasta no ano
-  const porCat = {};
-  lancs.filter(l => l.tipo === 'debito').forEach(l => {
-    porCat[l.categoria] = (porCat[l.categoria] || 0) + l.valor;
-  });
+  const maisGasto  = saiMes.indexOf(Math.max(...saiMes));
+  const maisSobra  = entMes.map((e,i) => e-saiMes[i]).indexOf(Math.max(...entMes.map((e,i) => e-saiMes[i])));
+  const porCat     = {};
+  lancs.filter(l => l.tipo === 'debito').forEach(l => { porCat[l.categoria] = (porCat[l.categoria]||0)+l.valor; });
   const catMaisGasta = Object.entries(porCat).sort((a,b)=>b[1]-a[1])[0];
 
   document.getElementById('anual-destaques').innerHTML = `
     <div class="destaque-item">
-      <div>
-        <div class="dest-label">mês com mais gastos</div>
-        <div class="dest-val">${saiMes[maisGasto] > 0 ? MESES[maisGasto] : '—'}</div>
-      </div>
-      ${saiMes[maisGasto] > 0 ? `<span class="dest-badge red">${fmtCompact(saiMes[maisGasto])}</span>` : ''}
+      <div><div class="dest-label">mês com mais gastos</div><div class="dest-val">${saiMes[maisGasto]>0?MESES[maisGasto]:'—'}</div></div>
+      ${saiMes[maisGasto]>0?`<span class="dest-badge red">${fmtCompact(saiMes[maisGasto])}</span>`:''}
     </div>
     <div class="destaque-item">
-      <div>
-        <div class="dest-label">mês com maior sobra</div>
-        <div class="dest-val">${entMes[maisSobra] > 0 ? MESES[maisSobra] : '—'}</div>
-      </div>
-      ${entMes[maisSobra] > 0 ? `<span class="dest-badge green">${fmtCompact(entMes[maisSobra]-saiMes[maisSobra])}</span>` : ''}
+      <div><div class="dest-label">mês com maior sobra</div><div class="dest-val">${entMes[maisSobra]>0?MESES[maisSobra]:'—'}</div></div>
+      ${entMes[maisSobra]>0?`<span class="dest-badge green">${fmtCompact(entMes[maisSobra]-saiMes[maisSobra])}</span>`:''}
     </div>
     <div class="destaque-item">
-      <div>
-        <div class="dest-label">categoria mais gasta</div>
-        <div class="dest-val">${catMaisGasta ? catMaisGasta[0] : '—'}</div>
-      </div>
-      ${catMaisGasta ? `<span class="dest-badge red">${fmtCompact(catMaisGasta[1])}</span>` : ''}
+      <div><div class="dest-label">categoria mais gasta</div><div class="dest-val">${catMaisGasta?catMaisGasta[0]:'—'}</div></div>
+      ${catMaisGasta?`<span class="dest-badge red">${fmtCompact(catMaisGasta[1])}</span>`:''}
     </div>`;
 }
 
@@ -712,86 +588,72 @@ function renderAll() {
 // FORMULÁRIO — NOVO LANÇAMENTO
 // ============================================================
 function setupForm() {
-  // Atualiza categorias conforme o tipo selecionado
+
   function atualizarCategorias(tipo) {
     const sel = document.getElementById('novo-categoria');
     const cats = CATS_POR_TIPO[tipo] || [];
     sel.innerHTML = cats.map(c => `<option value="${c.nome}">${c.icon} ${c.nome}</option>`).join('');
   }
 
-  // Tipo selector
+  function toggleDestino(tipo) {
+    const destinoGroup = document.getElementById('novo-destino-group');
+    const catGroup     = document.getElementById('novo-categoria').closest('.form-group');
+    const contaLabel   = document.querySelector('#novo-conta-group label');
+    if (tipo === 'transferencia') {
+      destinoGroup.classList.remove('hidden');
+      catGroup.classList.add('hidden');
+      if (contaLabel) contaLabel.textContent = 'De (origem)';
+    } else {
+      destinoGroup.classList.add('hidden');
+      catGroup.classList.remove('hidden');
+      if (contaLabel) contaLabel.textContent = 'Conta';
+    }
+  }
+
+  function atualizarOpcoesDestino() {
+    const origem  = document.getElementById('novo-conta').value;
+    const destSel = document.getElementById('novo-destino');
+    destSel.innerHTML = CAIXAS.filter(c => c !== origem)
+      .map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
   document.querySelectorAll('.tipo-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.tipoSelecionado = btn.dataset.tipo;
       atualizarCategorias(btn.dataset.tipo);
-    });
-  });
-
-  // Inicializa categorias e destino com o tipo padrão (débito)
-  atualizarCategorias(state.tipoSelecionado);
-  toggleDestino(state.tipoSelecionado);
-  atualizarOpcoesDestino();
-
-  // Máscara de valor
-  const valorInput = document.getElementById('novo-valor');
-  valorInput.addEventListener('input', (e) => {
-    let v = e.target.value.replace(/\D/g,'');
-    if (!v) { e.target.value = ''; return; }
-    v = (parseInt(v) / 100).toFixed(2);
-    e.target.value = 'R$ ' + parseFloat(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
-  });
-
-  // Data padrão hoje
-  const hoje = new Date();
-  document.getElementById('novo-data').value = hoje.toISOString().split('T')[0];
-
-  // Mostra/oculta campo destino conforme tipo
-  function toggleDestino(tipo) {
-    const destinoGroup = document.getElementById('novo-destino-group');
-    const contaGroup = document.getElementById('novo-conta-group');
-    if (tipo === 'transferencia') {
-      destinoGroup.classList.remove('hidden');
-      contaGroup.querySelector('label').textContent = 'De (origem)';
-    } else {
-      destinoGroup.classList.add('hidden');
-      contaGroup.querySelector('label').textContent = 'Conta';
-    }
-  }
-
-  // Atualiza destino ao mudar tipo (garante que não selecione mesma conta)
-  document.getElementById('novo-conta').addEventListener('change', () => {
-    atualizarOpcoesDestino();
-  });
-
-  function atualizarOpcoesDestino() {
-    const origem = document.getElementById('novo-conta').value;
-    const destSel = document.getElementById('novo-destino');
-    const CAIXAS = ['PicPay', 'Crédito Caixa', 'Reserva de Emergência', 'Investimento'];
-    destSel.innerHTML = CAIXAS.filter(c => c !== origem)
-      .map(c => `<option value="${c}">${c}</option>`).join('');
-  }
-
-  // Hook no tipo selector para mostrar/ocultar destino
-  document.querySelectorAll('.tipo-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
       toggleDestino(btn.dataset.tipo);
       atualizarOpcoesDestino();
     });
   });
 
-  // Salvar
+  document.getElementById('novo-conta').addEventListener('change', atualizarOpcoesDestino);
+
+  atualizarCategorias(state.tipoSelecionado);
+  toggleDestino(state.tipoSelecionado);
+  atualizarOpcoesDestino();
+
+  // Máscara de valor
+  document.getElementById('novo-valor').addEventListener('input', (e) => {
+    let v = e.target.value.replace(/\D/g,'');
+    if (!v) { e.target.value = ''; return; }
+    v = (parseInt(v)/100).toFixed(2);
+    e.target.value = 'R$ ' + parseFloat(v).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  });
+
+  const hoje = new Date();
+  document.getElementById('novo-data').value = hoje.toISOString().split('T')[0];
+
   document.getElementById('btn-salvar').addEventListener('click', async () => {
     const valorStr = document.getElementById('novo-valor').value.replace(/[^\d,]/g,'').replace(',','.');
-    const valor = parseFloat(valorStr);
-    const desc = document.getElementById('novo-desc').value.trim();
-    const cat = document.getElementById('novo-categoria').value;
-    const dataRaw = document.getElementById('novo-data').value;
-    const conta = document.getElementById('novo-conta').value;
-    const destino = state.tipoSelecionado === 'transferencia'
-      ? document.getElementById('novo-destino').value
-      : '';
+    const valor    = parseFloat(valorStr);
+    const desc     = document.getElementById('novo-desc').value.trim();
+    const cat      = document.getElementById('novo-categoria').value;
+    const dataRaw  = document.getElementById('novo-data').value;
+    const conta    = document.getElementById('novo-conta').value;
+    const destino  = state.tipoSelecionado === 'transferencia'
+      ? document.getElementById('novo-destino').value : '';
 
     if (!valor || valor <= 0) { showFeedback('Informe um valor válido', 'error'); return; }
     if (!dataRaw) { showFeedback('Informe a data', 'error'); return; }
@@ -800,10 +662,10 @@ function setupForm() {
     const dataFmt = `${dd}/${mm}/${yy}`;
 
     const lanc = {
-      data: dataFmt,
+      data:      dataFmt,
       descricao: desc || (state.tipoSelecionado === 'transferencia' ? `${conta} → ${destino}` : cat),
       valor,
-      tipo: state.tipoSelecionado,
+      tipo:      state.tipoSelecionado,
       categoria: state.tipoSelecionado === 'transferencia' ? 'Transferência' : cat,
       conta,
       destino
@@ -817,10 +679,9 @@ function setupForm() {
       await loadLancamentos();
       renderAll();
       showFeedback('Lançamento salvo! ✓', 'success');
-      // Reset form
       document.getElementById('novo-valor').value = '';
-      document.getElementById('novo-desc').value = '';
-      document.getElementById('novo-data').value = hoje.toISOString().split('T')[0];
+      document.getElementById('novo-desc').value  = '';
+      document.getElementById('novo-data').value  = hoje.toISOString().split('T')[0];
     } catch(e) {
       console.error(e);
       showFeedback('Erro ao salvar. Tente novamente.', 'error');
@@ -843,7 +704,6 @@ function showFeedback(msg, type) {
 // NAVEGAÇÃO
 // ============================================================
 function setupNav() {
-  // Bottom nav
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const screen = btn.dataset.screen;
@@ -855,38 +715,33 @@ function setupNav() {
     });
   });
 
-  // Navegação de mês
-  function navMes(delta, labelId, monthKey, yearKey, renderFn) {
+  function navMes(labelId, renderFn) {
     document.getElementById(`${labelId}-prev`).addEventListener('click', () => {
-      state[monthKey] -= 1;
-      if (state[monthKey] < 0) { state[monthKey] = 11; state[yearKey] -= 1; }
+      state.currentMonth -= 1;
+      if (state.currentMonth < 0) { state.currentMonth = 11; state.currentYear -= 1; }
       renderFn();
     });
     document.getElementById(`${labelId}-next`).addEventListener('click', () => {
-      state[monthKey] += 1;
-      if (state[monthKey] > 11) { state[monthKey] = 0; state[yearKey] += 1; }
+      state.currentMonth += 1;
+      if (state.currentMonth > 11) { state.currentMonth = 0; state.currentYear += 1; }
       renderFn();
     });
   }
 
-  navMes(1,'home','currentMonth','currentYear', renderHome);
-  navMes(1,'lanc','currentMonth','currentYear', renderLancamentos);
-  navMes(1,'res','currentMonth','currentYear', renderResumo);
+  navMes('home', renderHome);
+  navMes('lanc', renderLancamentos);
+  navMes('res',  renderResumo);
 
-  // Navegação de ano
   document.getElementById('anual-prev').addEventListener('click', () => { state.anualYear--; renderAnual(); });
   document.getElementById('anual-next').addEventListener('click', () => { state.anualYear++; renderAnual(); });
 
-  // Filtros
   document.getElementById('filter-categoria').addEventListener('change', renderLancamentos);
   document.getElementById('filter-tipo').addEventListener('change', renderLancamentos);
 
-  // Popula filtro de categorias
   const sel = document.getElementById('filter-categoria');
   CATEGORIAS.forEach(c => {
     const opt = document.createElement('option');
-    opt.value = c.nome;
-    opt.textContent = c.nome;
+    opt.value = c.nome; opt.textContent = c.nome;
     sel.appendChild(opt);
   });
 }

@@ -291,22 +291,22 @@ function renderHome() {
 
   const lancs = getLancamentosMes(m, y);
 
-  let entradas = 0, saidas = 0, reserva = 0, investimento = 0, resgates = 0;
+  let entradas = 0, saidas = 0, reserva = 0, investimento = 0, creditoCaixa = 0, resgates = 0;
   lancs.forEach(l => {
     if (l.tipo === 'credito') entradas += l.valor;
     else if (l.tipo === 'debito') saidas += l.valor;
     else if (l.tipo === 'transferencia') {
-      // Saindo do PicPay → guardado
       if (l.conta === 'PicPay') {
         if (l.destino === 'Reserva de Emergência') reserva += l.valor;
         else if (l.destino === 'Investimento') investimento += l.valor;
+        else if (l.destino === 'Crédito Caixa') creditoCaixa += l.valor;
       }
-      // Voltando para o PicPay → aumenta saldo
+      // Qualquer caixa voltando para o PicPay aumenta o saldo
       else if (l.destino === 'PicPay') resgates += l.valor;
     }
   });
 
-  const guardado = reserva + investimento;
+  const guardado = reserva + investimento + creditoCaixa;
   const saldo = entradas - saidas - guardado + resgates;
 
   document.getElementById('home-saldo').textContent = fmt(saldo);

@@ -339,8 +339,13 @@ function renderHome() {
   let entradas = 0, saidas = 0, guardado = 0;
   lancs.forEach(l => {
     if (l.tipo === 'credito') entradas += l.valor;
-    else if (l.tipo === 'transferencia') guardado += l.valor;
-    else saidas += l.valor;
+    else if (l.tipo === 'debito') saidas += l.valor;
+    else if (l.tipo === 'transferencia') {
+      // Se sai do PicPay → é guardado (reduz saldo)
+      if (l.conta === 'PicPay') guardado += l.valor;
+      // Se entra no PicPay vindo de outra caixa → é entrada (aumenta saldo)
+      else if (l.destino === 'PicPay') entradas += l.valor;
+    }
   });
 
   const saldo = entradas - saidas - guardado;

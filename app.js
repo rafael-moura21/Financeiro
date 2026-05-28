@@ -357,11 +357,6 @@ function renderHome() {
   document.getElementById('home-investimento').textContent = fmtCompact(investimento);
   });
 
-  #document.getElementById('home-entradas').textContent = fmtCompact(entradas);
-  #document.getElementById('home-saidas').textContent = fmtCompact(saidas);
-  #document.getElementById('home-reserva').textContent = fmtCompact(reserva);
-  #document.getElementById('home-investimento').textContent = fmtCompact(investimento);
-
   // Categorias
   const catEl = document.getElementById('home-categorias');
   const despesas = lancs.filter(l => l.tipo === 'debito');

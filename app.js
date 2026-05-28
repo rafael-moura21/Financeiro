@@ -33,6 +33,8 @@ const CATEGORIAS = [
   { nome: 'Reembolso',             icon: '↩️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Ajuste Caixa',          icon: '⚖️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
   { nome: 'Saldo M-1',             icon: '📅', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
+  { nome: 'Reserva M-1',           icon: '🛡️', cor: '#E1F5EE', corVal: '#0F6E56', corBar: '#1D9E75', tipo: 'credito' },
+  { nome: 'Cartão M-1',            icon: '💳', cor: '#FEF3E2', corVal: '#92520A', corBar: '#D4820A', tipo: 'credito' },
 ];
 
 const CATS_POR_TIPO = {
@@ -602,16 +604,24 @@ function setupForm() {
 
   function toggleDestino(tipo) {
     const destinoGroup = document.getElementById('novo-destino-group');
-    const catGroup     = document.getElementById('novo-categoria').closest('.form-group');
+    const contaGroup   = document.getElementById('novo-conta-group');
     const contaLabel   = document.querySelector('#novo-conta-group label');
+    const contaSel     = document.getElementById('novo-conta');
+
     if (tipo === 'transferencia') {
       destinoGroup.classList.remove('hidden');
-      catGroup.classList.add('hidden');
       if (contaLabel) contaLabel.textContent = 'De (origem)';
-    } else {
+      contaSel.innerHTML = CAIXAS.map(c => `<option value="${c}">${c}</option>`).join('');
+    } else if (tipo === 'credito') {
       destinoGroup.classList.add('hidden');
-      catGroup.classList.remove('hidden');
+      if (contaLabel) contaLabel.textContent = 'Conta destino';
+      contaSel.innerHTML = ['PicPay','Reserva de Emergência','Crédito Caixa']
+        .map(c => `<option value="${c}">${c}</option>`).join('');
+    } else {
+      // débito — fixo PicPay
+      destinoGroup.classList.add('hidden');
       if (contaLabel) contaLabel.textContent = 'Conta';
+      contaSel.innerHTML = '<option value="PicPay">PicPay</option>';
     }
   }
 

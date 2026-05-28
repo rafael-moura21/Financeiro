@@ -60,9 +60,7 @@ function fmt(val) {
 }
 
 function fmtCompact(val) {
-  const n = Number(val);
-  if (n >= 1000) return 'R$ ' + (n/1000).toFixed(1).replace('.',',') + 'k';
-  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  return Number(val).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
 function showLoading(msg = 'Carregando...') {

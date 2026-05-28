@@ -5,7 +5,10 @@ const CONFIG = {
   CLIENT_ID: '75059835538-8j6hih1r8r0h508cnfa8et440ga814gb.apps.googleusercontent.com',
   API_KEY: 'AIzaSyDtZiz6oN6ey_O1Oe3TxBpFniCxtN3FwN4',
   SHEET_ID: '1BnvbHIM6vFIONsHvPCvtQyHXlhIYqBrgV8cnneyzN8E',
-  DISCOVERY_DOCS: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+  DISCOVERY_DOCS: [
+    'https://sheets.googleapis.com/$discovery/rest?version=v4',
+    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+  ],
   SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file'
 };
 
@@ -110,6 +113,103 @@ function checkBothReady() {
   }
 }
 
+// ============================================================
+// GOOGLE DRIVE — CONFIG POR USUÁRIO
+// ============================================================
+const CONFIG_FILENAME = 'financeiro-config.json';
+
+async function buscarConfigNoDrive() {
+  try {
+    // Busca o arquivo de config no Drive do usuário
+    const res = await gapi.client.drive.files.list({
+      q: "name='" + CONFIG_FILENAME + "' and trashed=false",
+      fields: 'files(id, name)',
+      spaces: 'drive'
+    });
+
+    const files = res.result.files;
+    if (files && files.length > 0) {
+      // Encontrou o arquivo — lê o conteúdo
+      const fileRes = await gapi.client.drive.files.get({
+        fileId: files[0].id,
+        alt: 'media'
+      });
+      const config = JSON.parse(fileRes.body);
+      return config.sheetId || null;
+    }
+    return null;
+  } catch(err) {
+    console.error('Erro ao buscar config no Drive:', err);
+    return null;
+  }
+}
+
+async function salvarConfigNoDrive(sheetId) {
+  try {
+    const content = JSON.stringify({ sheetId });
+    const blob = new Blob([content], { type: 'application/json' });
+
+    // Verifica se já existe
+    const res = await gapi.client.drive.files.list({
+      q: "name='" + CONFIG_FILENAME + "' and trashed=false",
+      fields: 'files(id)',
+      spaces: 'drive'
+    });
+
+    const files = res.result.files;
+    if (files && files.length > 0) {
+      // Atualiza o existente
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/' + files[0].id + '?uploadType=media', {
+        method: 'PATCH',
+        headers: {
+          'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
+          'Content-Type': 'application/json'
+        },
+        body: content
+      });
+    } else {
+      // Cria novo
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
+          'Content-Type': 'multipart/related; boundary=bound'
+        },
+        body: '--bound
+Content-Type: application/json
+
+' +
+              JSON.stringify({ name: CONFIG_FILENAME, mimeType: 'application/json' }) +
+              '
+--bound
+Content-Type: application/json
+
+' +
+              content + '
+--bound--'
+      });
+    }
+  } catch(err) {
+    console.error('Erro ao salvar config no Drive:', err);
+  }
+}
+
+async function buscarPlanilhaExistente() {
+  try {
+    const res = await gapi.client.drive.files.list({
+      q: "name='Meu Financeiro - Controle' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'",
+      fields: 'files(id, name)',
+      spaces: 'drive'
+    });
+    const files = res.result.files;
+    if (files && files.length > 0) return files[0].id;
+    return null;
+  } catch(err) {
+    console.error('Erro ao buscar planilha:', err);
+    return null;
+  }
+}
+
 function initGoogleAPI() {
   const gisScript = document.createElement('script');
   gisScript.src = 'https://accounts.google.com/gsi/client';
@@ -138,7 +238,30 @@ function handleLogin() {
 
 async function onSignIn() {
   document.getElementById('auth-screen').classList.add('hidden');
-  state.sheetId = CONFIG.SHEET_ID || localStorage.getItem('sheetId') || '';
+  showLoading('Buscando seus dados...');
+
+  // 1. Tenta buscar o SHEET_ID no Drive do usuário
+  let sheetId = await buscarConfigNoDrive();
+
+  // 2. Se não encontrou no Drive, tenta migrar do localStorage ou CONFIG
+  if (!sheetId) {
+    sheetId = CONFIG.SHEET_ID || localStorage.getItem('sheetId') || '';
+
+    // Se encontrou via migração, salva no Drive para uso futuro
+    if (sheetId) {
+      await salvarConfigNoDrive(sheetId);
+    }
+  }
+
+  // 3. Se ainda não encontrou, busca planilha existente no Drive pelo nome
+  if (!sheetId) {
+    sheetId = await buscarPlanilhaExistente();
+    if (sheetId) await salvarConfigNoDrive(sheetId);
+  }
+
+  hideLoading();
+  state.sheetId = sheetId;
+
   if (!state.sheetId) {
     document.getElementById('setup-screen').classList.remove('hidden');
   } else {
@@ -166,6 +289,7 @@ async function createSheet() {
     const sheetId = res.result.spreadsheetId;
     localStorage.setItem('sheetId', sheetId);
     state.sheetId = sheetId;
+    await salvarConfigNoDrive(sheetId);
 
     await gapi.client.sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: sheetId,
@@ -293,23 +417,18 @@ function renderHome() {
 
   const lancs = getLancamentosMes(m, y);
 
-  let entradas = 0, saidas = 0, reserva = 0, investimento = 0, creditoCaixa = 0, resgates = 0;
+  let entradas = 0, saidas = 0, reserva = 0, investimento = 0;
   lancs.forEach(l => {
     if (l.tipo === 'credito') entradas += l.valor;
     else if (l.tipo === 'debito') saidas += l.valor;
-    else if (l.tipo === 'transferencia') {
-      if (l.conta === 'PicPay') {
-        if (l.destino === 'Reserva de Emergência') reserva += l.valor;
-        else if (l.destino === 'Investimento') investimento += l.valor;
-        else if (l.destino === 'Crédito Caixa') creditoCaixa += l.valor;
-      }
-      // Qualquer caixa voltando para o PicPay aumenta o saldo
-      else if (l.destino === 'PicPay') resgates += l.valor;
+    else if (l.tipo === 'transferencia' && l.conta === 'PicPay') {
+      if (l.destino === 'Reserva de Emergência') reserva += l.valor;
+      else if (l.destino === 'Investimento') investimento += l.valor;
     }
   });
 
-  const guardado = reserva + investimento + creditoCaixa;
-  const saldo = entradas - saidas - guardado + resgates;
+  const guardado = reserva + investimento;
+  const saldo = entradas - saidas - guardado;
 
   document.getElementById('home-saldo').textContent = fmt(saldo);
   document.getElementById('home-entradas').textContent = fmtCompact(entradas);
@@ -604,22 +723,24 @@ function setupForm() {
 
   function toggleDestino(tipo) {
     const destinoGroup = document.getElementById('novo-destino-group');
-    const contaGroup   = document.getElementById('novo-conta-group');
+    const catGroup     = document.getElementById('novo-categoria').closest('.form-group');
     const contaLabel   = document.querySelector('#novo-conta-group label');
     const contaSel     = document.getElementById('novo-conta');
 
     if (tipo === 'transferencia') {
       destinoGroup.classList.remove('hidden');
+      catGroup.classList.add('hidden');
       if (contaLabel) contaLabel.textContent = 'De (origem)';
       contaSel.innerHTML = CAIXAS.map(c => `<option value="${c}">${c}</option>`).join('');
     } else if (tipo === 'credito') {
       destinoGroup.classList.add('hidden');
+      catGroup.classList.remove('hidden');
       if (contaLabel) contaLabel.textContent = 'Conta destino';
       contaSel.innerHTML = ['PicPay','Reserva de Emergência','Crédito Caixa']
         .map(c => `<option value="${c}">${c}</option>`).join('');
     } else {
-      // débito — fixo PicPay
       destinoGroup.classList.add('hidden');
+      catGroup.classList.remove('hidden');
       if (contaLabel) contaLabel.textContent = 'Conta';
       contaSel.innerHTML = '<option value="PicPay">PicPay</option>';
     }

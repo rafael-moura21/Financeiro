@@ -420,18 +420,19 @@ function renderHome() {
 
   const lancs = getLancamentosMes(m, y);
 
-  let entradas = 0, saidas = 0, reserva = 0, investimento = 0;
+  const caixas = calcularSaldoCaixas();
+  const saldo = caixas['PicPay'];
+
+  let reserva = 0, investimento = 0;
   lancs.forEach(l => {
-    if (l.tipo === 'credito') entradas += l.valor;
-    else if (l.tipo === 'debito') saidas += l.valor;
-    else if (l.tipo === 'transferencia' && l.conta === 'PicPay') {
+    if (l.tipo === 'transferencia' && l.conta === 'PicPay') {
       if (l.destino === 'Reserva de Emergência') reserva += l.valor;
       else if (l.destino === 'Investimento') investimento += l.valor;
     }
   });
 
-  const guardado = reserva + investimento;
-  const saldo = entradas - saidas - guardado;
+  const entradas = lancs.filter(l => l.tipo === 'credito').reduce((a,b) => a + b.valor, 0);
+  const saidas   = lancs.filter(l => l.tipo === 'debito').reduce((a,b) => a + b.valor, 0);
 
   document.getElementById('home-saldo').textContent = fmt(saldo);
   document.getElementById('home-entradas').textContent = fmtCompact(entradas);

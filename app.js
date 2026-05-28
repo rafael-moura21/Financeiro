@@ -336,7 +336,7 @@ async function loadLancamentos() {
       id: i,
       data:      r[0] || '',
       descricao: r[1] || '',
-      valor:     parseFloat(r[2]) || 0,
+      valor:     parseFloat(String(r[2]).replace(',', '.')) || 0,
       tipo:      r[3] || 'debito',
       categoria: r[4] || '',
       conta:     r[5] || 'PicPay',

@@ -418,8 +418,18 @@ function renderHome() {
 
   const lancs = getLancamentosMes(m, y);
 
-  const caixas = calcularSaldoCaixas();
-  const saldo = caixas['PicPay'];
+  const saldo = (() => {
+    let total = 0;
+    lancs.forEach(l => {
+      if (l.tipo === 'credito') total += l.valor;
+      else if (l.tipo === 'debito') total -= l.valor;
+      else if (l.tipo === 'transferencia') {
+        if (l.conta === 'PicPay') total -= l.valor;
+        else if (l.destino === 'PicPay') total += l.valor;
+      }
+    });
+    return total;
+  })();
 
   let reserva = 0, investimento = 0;
   lancs.forEach(l => {

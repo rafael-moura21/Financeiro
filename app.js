@@ -547,7 +547,18 @@ function renderResumo() {
   const m = state.currentMonth, y = state.currentYear;
   document.getElementById('res-month-label').textContent = `${MESES[m]} ${y}`;
 
-  const caixas = calcularSaldoCaixas();
+  const caixas = { 'PicPay': 0, 'Crédito Caixa': 0, 'Reserva de Emergência': 0, 'Investimento': 0 };
+  const lancsResumo = getLancamentosMes(m, y);
+  lancsResumo.forEach(l => {
+    if (l.tipo === 'credito') {
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] += l.valor;
+    } else if (l.tipo === 'debito') {
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] -= l.valor;
+    } else if (l.tipo === 'transferencia') {
+      if (caixas.hasOwnProperty(l.conta)) caixas[l.conta] -= l.valor;
+      if (l.destino && caixas.hasOwnProperty(l.destino)) caixas[l.destino] += l.valor;
+    }
+  });
 
   document.getElementById('resumo-contas').innerHTML = `
     <div class="resumo-item">

@@ -652,8 +652,9 @@ function renderAnual() {
 
   const lancs = getLancamentosAno(y);
   let totalEnt = 0, totalSai = 0, totalGua = 0;
+  const CAT_IGNORAR = ['Saldo M-1', 'Reserva M-1', 'Cartão M-1'];
   lancs.forEach(l => {
-    if (l.tipo === 'credito') totalEnt += l.valor;
+    if (l.tipo === 'credito' && !CAT_IGNORAR.includes(l.categoria)) totalEnt += l.valor;
     else if (l.tipo === 'debito') totalSai += l.valor;
     else if (l.tipo === 'transferencia' && l.conta === 'PicPay') totalGua += l.valor;
   });
